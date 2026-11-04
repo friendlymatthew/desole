@@ -12,3 +12,7 @@ datatest-stable = "0.3.3"
 [[test]]
 name = "infcover"
 harness = false
+
+[profile.profiling]
+inherits = "release"
+debug = true
