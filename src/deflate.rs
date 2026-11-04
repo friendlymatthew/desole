@@ -92,7 +92,11 @@ fn inflate_block(
                 let distance = DIST_BASE[dist_sym] + reader.read_bits(DIST_EXTRA[dist_sym])?;
 
                 ensure!(distance <= out.len(), "distance too far back");
+
                 let start = out.len() - distance;
+
+                out.reserve(length);
+
                 for i in 0..length {
                     out.push(out[start + i]);
                 }
