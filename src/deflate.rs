@@ -1,3 +1,5 @@
+use std::sync::LazyLock;
+
 use anyhow::{Result, bail, ensure};
 
 use crate::{BitReader, huffman::HuffmanDecoder};
@@ -22,6 +24,8 @@ const DIST_EXTRA: [usize; 30] = [
 const CL_ORDER: [usize; 19] = [
     16, 17, 18, 0, 8, 7, 9, 6, 10, 5, 11, 4, 12, 3, 13, 2, 14, 1, 15,
 ];
+
+static FIXED_CODES: LazyLock<(HuffmanDecoder, HuffmanDecoder)> = LazyLock::new(fixed_codes);
 
 pub fn decode(input: &[u8]) -> Result<Vec<u8>> {
     let mut reader = BitReader::new(input);
@@ -49,8 +53,8 @@ pub fn decode(input: &[u8]) -> Result<Vec<u8>> {
             }
             0b01 => {
                 // compressed with fixed huffman codes
-                let (lit, dist) = fixed_codes()?;
-                inflate_block(&mut reader, &mut out, &lit, &dist)?;
+                let (lit, dist) = &*FIXED_CODES;
+                inflate_block(&mut reader, &mut out, lit, dist)?;
             }
             0b10 => {
                 // compressed with dynamic huffman codes
@@ -106,17 +110,17 @@ fn inflate_block(
     }
 }
 
-fn fixed_codes() -> Result<(HuffmanDecoder, HuffmanDecoder)> {
+fn fixed_codes() -> (HuffmanDecoder, HuffmanDecoder) {
     let mut lit = [0u8; 288];
     lit[0..144].fill(8);
     lit[144..256].fill(9);
     lit[256..280].fill(7);
     lit[280..288].fill(8);
 
-    Ok((
-        HuffmanDecoder::try_new(&lit)?,
-        HuffmanDecoder::try_new(&[5; 32])?,
-    ))
+    (
+        HuffmanDecoder::try_new(&lit).unwrap(),
+        HuffmanDecoder::try_new(&[5; 32]).unwrap(),
+    )
 }
 
 fn read_dynamic_codes(reader: &mut BitReader) -> Result<(HuffmanDecoder, HuffmanDecoder)> {
